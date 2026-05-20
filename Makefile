@@ -13,7 +13,8 @@ MOBILE_DIR := $(ROOT)mobile
 NPM        ?= npm
 
 .PHONY: help install install-python install-npm \
-        api gui cli analyzer mobile dev clean
+        api gui cli analyzer mobile dev clean \
+        test test-setup test-api
 
 .DEFAULT_GOAL := help
 
@@ -52,20 +53,34 @@ cli: $(VENV_BIN)/python ## Interactive CLI (analyzer.py)
 
 analyzer: cli ## Alias for cli
 
-mobile: install-npm ## Expo dev server (scan QR with Expo Go)
-	cd $(MOBILE_DIR) && npx expo start
+mobile: install-npm ## Expo dev server on LAN (scan QR with Expo Go)
+	cd $(MOBILE_DIR) && npx expo start --lan
 
 # ---------------------------------------------------------------------------
 # Dev — API + mobile together
 # ---------------------------------------------------------------------------
 
 dev: install ## Run API and Expo in parallel (Ctrl+C stops both)
-	@echo "Starting API (http://0.0.0.0:5000) and Expo …"
-	@echo "Set mobile/App.js API_BASE to the IP printed by the API."
+	@echo "Starting API (http://0.0.0.0:5000) and Expo (LAN) …"
+	@echo "Phone: Expo Go → scan QR. API URL auto-detects in dev."
 	@trap 'kill 0' INT TERM EXIT; \
 		$(PY) $(ROOT)api.py & \
-		cd $(MOBILE_DIR) && npx expo start & \
+		cd $(MOBILE_DIR) && npx expo start --lan & \
 		wait
+
+# ---------------------------------------------------------------------------
+# Test
+# ---------------------------------------------------------------------------
+
+test: $(VENV_BIN)/python test-setup ## Pytest + mobile layout checks (no API server)
+	$(PIP) install -q -r $(ROOT)requirements-dev.txt
+	$(PY) -m pytest $(ROOT)tests/ -q
+
+test-setup: ## Verify mobile + project layout only (shell)
+	@bash $(ROOT)scripts/check_mobile.sh
+
+test-api: ## Live API smoke test (requires: make api in another terminal)
+	@bash $(ROOT)scripts/test_api_live.sh
 
 # ---------------------------------------------------------------------------
 # Clean

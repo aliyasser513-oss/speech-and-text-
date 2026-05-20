@@ -27,10 +27,14 @@ speech-and-text-/
 ├── analyzer.py          # Core pipeline (STT, NLP, LLM)
 ├── gui.py               # Desktop Tkinter UI
 ├── api.py               # Flask REST API for mobile / HTTP clients
+├── host_util.py         # LAN IP helper (used by api.py)
 ├── requirements.txt     # Python dependencies (pinned)
-├── Makefile             # install, run, and dev targets
+├── requirements-dev.txt # pytest (make test)
+├── Makefile             # install, run, dev, and test targets
+├── scripts/             # check_mobile.sh, test_api_live.sh
+├── tests/               # automated setup tests
 ├── mobile/              # Expo / React Native app
-│   ├── App.js           # UI + API client (set API_BASE here)
+│   ├── App.js           # UI + API client (auto-detect API URL in dev)
 │   ├── package.json
 │   └── package-lock.json
 └── README.md
@@ -58,7 +62,47 @@ make gui           # desktop UI only
 make cli           # terminal REPL
 ```
 
-`make dev` runs `api.py` and `npx expo start` in parallel. Set `API_BASE` in `mobile/App.js` to the LAN URL printed by the API.
+`make dev` runs `api.py` and `npx expo start --lan` in parallel. The phone auto-detects the API URL in dev (Settings gear to override).
+
+## First phone demo (Android + Expo Go)
+
+**Order matters** — start the API before opening the app on your phone.
+
+1. **One-time setup:** `make install`
+2. **Terminal 1 — API:** `make api`  
+   Wait until you see **Pipeline ready** (first run may download Whisper for several minutes).  
+   Note the printed URL, e.g. `http://192.168.1.10:5000`.
+3. **Terminal 2 — Expo:** `make mobile`  
+   A QR code appears in the terminal or browser dev tools.
+4. **Phone:** Same Wi‑Fi as the PC → open **Expo Go** → **Scan QR code**.
+5. **In the app:** Status should become **Ready**. Type a message → **Send**.  
+   Check the NLP strip (intent / keywords). The assistant reply may show `[LLM error]…` until Ollama is installed — that is OK for v1.
+6. **If status stays red:** Open **Settings (gear)** → paste the URL from Terminal 1 → Save.
+
+**Firewall (Linux):** allow Metro and Flask if needed:
+
+```bash
+sudo ufw allow 8081/tcp
+sudo ufw allow 5000/tcp
+```
+
+**Without Ollama:** Text chat and NLP still work; only the LLM reply is an error string.
+
+## Testing
+
+| Command | What it checks |
+|---------|----------------|
+| `make test` | Pytest (`tests/`) + `scripts/check_mobile.sh` — no running server |
+| `make test-setup` | Mobile layout / entry point only |
+| `make test-api` | Live `curl` against `/health` and `/chat` — **requires `make api` in another terminal** |
+
+```bash
+make test
+# optional, with API running:
+make test-api
+# or from another machine on LAN:
+API_URL=http://192.168.1.10:5000 make test-api
+```
 
 ## Python setup
 
@@ -96,17 +140,13 @@ Start the API server (listens on all interfaces, port 5000):
 python api.py
 ```
 
-The terminal prints your LAN URL, e.g. `http://192.168.1.5:5000`. Use that IP in the mobile app:
+The terminal prints your LAN URL. On the phone, dev builds auto-detect that IP via Expo; use **Settings** in the app to override if needed.
 
-1. Edit `mobile/App.js` and set `API_BASE` to your PC’s address.
-2. Install mobile dependencies and start Expo:
+```bash
+make mobile
+```
 
-   ```bash
-   make mobile
-   # or: cd mobile && npm ci && npx expo start
-   ```
-
-3. Open the project in **Expo Go** on your phone (same Wi‑Fi as the PC).
+Open **Expo Go** on your phone (same Wi‑Fi) and scan the QR code.
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
