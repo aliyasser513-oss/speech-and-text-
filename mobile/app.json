@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "Speech & Text Analyzer",
+    "slug": "speech-text-analyzer",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0D1117"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0D1117"
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.INTERNET"
+      ],
+      "package": "com.tm471.speechanalyzer"
+    },
+    "plugins": [
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow Speech & Text Analyzer to use your microphone for voice input."
+        }
+      ]
+    ]
+  }
+}
