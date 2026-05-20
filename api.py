@@ -22,13 +22,13 @@ Set the same IP in the mobile app (App.js → API_BASE).
 """
 
 import os
-import socket
 import tempfile
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 from analyzer import SpeechTextAnalyzer
+from host_util import lan_ip
 
 # ---------------------------------------------------------------------------
 app = Flask(__name__)
@@ -122,20 +122,18 @@ def reset():
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    # Print the local IP so the user knows what to put in the mobile app
-    try:
-        local_ip = socket.gethostbyname(socket.gethostname())
-    except Exception:
-        local_ip = "127.0.0.1"
+    local_ip = lan_ip()
+    api_url = f"http://{local_ip}:5000"
 
     print()
     print("=" * 50)
     print("  Speech & Text Analyzer — API Server")
     print("=" * 50)
-    print(f"  URL  :  http://{local_ip}:5000")
+    print(f"  URL  :  {api_url}")
     print()
-    print("  Set this IP in the mobile app:")
-    print(f"    App.js  →  API_BASE = 'http://{local_ip}:5000'")
+    print("  On the phone (Expo Go, same Wi‑Fi):")
+    print("    API URL is auto-detected from your PC IP in dev.")
+    print("    Or open Settings (gear) and paste:", api_url)
     print()
     print("  Make sure your phone is on the same WiFi network.")
     print("  Press Ctrl+C to stop.")

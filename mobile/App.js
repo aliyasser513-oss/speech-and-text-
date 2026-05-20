@@ -3,15 +3,15 @@
  * TM471 Final Year Project | Ali Yasser Ali Mohammed | 21510864
  *
  * Connects to the Flask API (api.py) running on your PC over WiFi.
- * IMPORTANT: Set API_BASE to your PC's local IP before running.
  *
- *   1. Start the server on your PC:   python api.py
- *   2. Note the IP it prints, e.g.    http://192.168.1.5:5000
- *   3. Paste that IP below            API_BASE = 'http://192.168.1.5:5000'
- *   4. Run the app:                   npx expo start  (scan QR with Expo Go)
+ *   1. Start the server on your PC:   make api
+ *   2. Start Expo (LAN):              make mobile
+ *   3. Scan the QR code with Expo Go (same Wi‑Fi as the PC)
+ *   4. API URL auto-detects in dev; use Settings (gear) to override
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import Constants from 'expo-constants';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   StyleSheet, KeyboardAvoidingView, Platform, Alert,
@@ -20,9 +20,19 @@ import {
 import { Audio } from 'expo-av';
 import axios from 'axios';
 
-// ─── ⚙️  CONFIGURE THIS ────────────────────────────────────────────────────
-const API_BASE = 'http://192.168.1.5:5000'; // ← replace with your PC's IP
-// ───────────────────────────────────────────────────────────────────────────
+// ─── API URL (dev: same IP as Metro bundler) ───────────────────────────────
+
+function devApiBase() {
+  const debuggerHost =
+    Constants.expoGoConfig?.debuggerHost ??
+    Constants.manifest2?.extra?.expoGo?.debuggerHost ??
+    Constants.manifest?.debuggerHost;
+  if (!debuggerHost) return null;
+  const host = debuggerHost.split(':')[0];
+  return `http://${host}:5000`;
+}
+
+const DEFAULT_API_BASE = devApiBase() ?? 'http://127.0.0.1:5000';
 
 // Colour palette — matches the desktop dark theme
 const T = {
@@ -63,8 +73,8 @@ export default function App() {
   const [recording, setRecording] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
-  const [apiBase,   setApiBase]   = useState(API_BASE);
-  const [apiInput,  setApiInput]  = useState(API_BASE);
+  const [apiBase,   setApiBase]   = useState(DEFAULT_API_BASE);
+  const [apiInput,  setApiInput]  = useState(DEFAULT_API_BASE);
 
   const scrollRef = useRef(null);
 
