@@ -1,0 +1,23 @@
+# Speech & Text Analyzer — Python dependencies
+# Tested on Python 3.12 (3.10+ should work).
+#
+# Setup:
+#   python3 -m venv .venv
+#   source .venv/bin/activate   # Windows: .venv\Scripts\activate
+#   pip install -r requirements.txt
+#
+# Also required (not installable via pip):
+#   - Ollama running locally with the llama3 model:  ollama pull llama3
+#   - System audio libs for sounddevice (e.g. libportaudio on Linux)
+
+# Core pipeline (analyzer.py)
+faster-whisper==1.2.1
+numpy==2.4.6
+ollama==0.6.2
+sounddevice==0.5.5
+spacy==3.8.14
+en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
+
+# REST API server (api.py)
+flask==3.1.3
+flask-cors==6.0.2
