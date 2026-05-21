@@ -21,6 +21,7 @@ Then open the printed URL on your phone's browser to confirm it works.
 Set the same IP in the mobile app (App.js → API_BASE).
 """
 
+import logging
 import os
 import tempfile
 
@@ -31,17 +32,34 @@ from analyzer import SpeechTextAnalyzer
 from host_util import lan_ip
 
 # ---------------------------------------------------------------------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(name)-8s | %(levelname)s | %(message)s",
+    datefmt="%H:%M:%S",
+)
+log = logging.getLogger("api")
+logging.getLogger("werkzeug").setLevel(logging.INFO)
+
 app = Flask(__name__)
 CORS(app)   # allow the React Native app to POST from any origin
 
-print("[API] Loading pipeline (Whisper + spaCy + LLaMA 3) …")
+log.info("Loading pipeline (Whisper + spaCy + LLaMA 3) …")
 analyzer = SpeechTextAnalyzer()
-print("[API] Pipeline ready.")
+log.info("Pipeline ready.")
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+def _client_ip() -> str:
+    return request.remote_addr or "-"
+
+
+def _reply_preview(reply: str, limit: int = 120) -> str:
+    one_line = reply.replace("\n", " ").strip()
+    return one_line if len(one_line) <= limit else one_line[: limit - 3] + "..."
+
 
 def _serialize(result) -> dict:
     """Convert a PipelineResult into a JSON-safe dict."""
@@ -65,6 +83,7 @@ def _serialize(result) -> dict:
 @app.get("/health")
 def health():
     """Quick liveness check — the mobile app pings this on startup."""
+    log.info("MOBILE IN  | %s | GET /health", _client_ip())
     return jsonify({"status": "ok", "model": "llama3"})
 
 
@@ -76,11 +95,23 @@ def chat():
     """
     data = request.get_json(force=True, silent=True) or {}
     text = (data.get("text") or "").strip()
+    client = _client_ip()
+    log.info("MOBILE IN  | %s | POST /chat | message=%r", client, text)
     if not text:
+        log.info("MOBILE OUT | %s | POST /chat | status=400 | error=empty text", client)
         return jsonify({"error": "empty text"}), 400
 
     result = analyzer.process_text(text)
-    return jsonify(_serialize(result))
+    payload = _serialize(result)
+    log.info(
+        "MOBILE OUT | %s | POST /chat | message=%r | intent=%s | keywords=%s | reply=%r",
+        client,
+        text,
+        payload["intent"],
+        payload["keywords"],
+        _reply_preview(payload["reply"]),
+    )
+    return jsonify(payload)
 
 
 @app.post("/voice")
@@ -93,10 +124,18 @@ def voice():
     Accepts: .wav, .m4a, .mp4, .webm, .ogg — Whisper handles all of them.
     """
     if "audio" not in request.files:
+        log.info("MOBILE OUT | %s | POST /voice | status=400 | error=no audio field", _client_ip())
         return jsonify({"error": "no audio field in request"}), 400
 
     f = request.files["audio"]
     ext = os.path.splitext(f.filename or "audio.wav")[1] or ".wav"
+    client = _client_ip()
+    log.info(
+        "MOBILE IN  | %s | POST /voice | filename=%r ext=%s",
+        client,
+        f.filename,
+        ext,
+    )
 
     with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
         f.save(tmp.name)
@@ -107,12 +146,21 @@ def voice():
     finally:
         os.unlink(tmp_path)
 
-    return jsonify(_serialize(result))
+    payload = _serialize(result)
+    log.info(
+        "MOBILE OUT | %s | POST /voice | transcript=%r | intent=%s | reply=%r",
+        client,
+        payload["user_input"],
+        payload["intent"],
+        _reply_preview(payload["reply"]),
+    )
+    return jsonify(payload)
 
 
 @app.post("/reset")
 def reset():
     """Clear conversation history — wired to the 'New chat' button."""
+    log.info("MOBILE IN  | %s | POST /reset", _client_ip())
     analyzer.reset_conversation()
     return jsonify({"status": "ok"})
 
@@ -140,4 +188,7 @@ if __name__ == "__main__":
     print("=" * 50)
     print()
 
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    # debug=True for tracebacks; use_reloader=False avoids loading Whisper twice
+    debug = os.getenv("FLASK_DEBUG", "1").lower() in ("1", "true", "yes")
+    log.info("Starting Flask (debug=%s, reloader=off)", debug)
+    app.run(host="0.0.0.0", port=5000, debug=debug, use_reloader=False)

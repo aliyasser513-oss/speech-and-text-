@@ -42,7 +42,7 @@ install-npm: ## npm ci in mobile/ (uses package-lock.json)
 # Run (one process per target)
 # ---------------------------------------------------------------------------
 
-api: $(VENV_BIN)/python ## Flask REST API on :5000
+api: $(VENV_BIN)/python ## Flask REST API on :5000 (debug + INFO request logs)
 	$(PY) $(ROOT)api.py
 
 gui: $(VENV_BIN)/python ## Desktop Tkinter UI

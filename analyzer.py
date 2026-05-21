@@ -297,7 +297,8 @@ class LLMResponder:
             )
             reply = response["message"]["content"].strip()
         except Exception as exc:
-            log.exception("[LLM] generation failed")
+            # Warning only — full traceback drowns API/mobile request logs during dev
+            log.warning("[LLM] generation failed: %s", exc)
             return (f"[LLM error] {exc}\n"
                     f"Check that Ollama is running and that "
                     f"`ollama pull {self.cfg.LLM_MODEL}` has been done.")
