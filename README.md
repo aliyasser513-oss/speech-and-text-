@@ -55,6 +55,8 @@ speech-and-text-/
 
 ## Quick start (Makefile)
 
+Works on **Linux, macOS, and Windows** (install [GNU Make](https://gnuwin32.sourceforge.net/) or `choco install make` on Windows; use `python` not `python3` if needed).
+
 ```bash
 make help          # list all targets
 make install       # Python venv + mobile npm deps
@@ -203,6 +205,14 @@ Built with **Expo 51** and React Native. Features:
 - **Settings** → override API base URL
 
 Locked dependencies: `mobile/package-lock.json` — install with `npm ci` (or `make install-npm`).
+
+## Windows notes
+
+- The Makefile detects `OS=Windows_NT` and uses `.venv\Scripts\python.exe` instead of `.venv/bin/python`.
+- `npm` / `npx` are invoked as `npm.cmd` / `npx.cmd` when needed.
+- `make dev` runs `scripts/dev.py` (no Bash `trap` required).
+- `make test-setup` / `make test-api` use Python scripts, not `.sh` files.
+- **WSL** is treated as Linux (uses `bin/` paths); run the whole stack inside WSL for the closest match to Linux.
 
 ## System notes
 
