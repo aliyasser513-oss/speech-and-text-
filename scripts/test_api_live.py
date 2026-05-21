@@ -42,7 +42,13 @@ def main() -> None:
     if health.get("status") != "ok":
         print(f"FAIL: unexpected /health payload: {health}", file=sys.stderr)
         sys.exit(1)
-    print("OK: GET /health")
+    for key in ("ollama", "whisper", "ready_for_chat"):
+        if key not in health:
+            print(f"FAIL: /health missing {key!r}", file=sys.stderr)
+            sys.exit(1)
+    print(f"OK: GET /health (ollama={health['ollama']}, whisper={health['whisper']})")
+    if health.get("ollama") == "down":
+        print("WARN: Ollama is down — install/start Ollama and run: ollama pull llama3")
 
     try:
         chat = json.loads(post_json("/chat", {"text": "hello"}))
@@ -56,7 +62,9 @@ def main() -> None:
             sys.exit(1)
 
     print("OK: POST /chat (intent + reply present)")
-    print("Sample reply (LLM may be offline):")
+    if str(chat.get("reply", "")).startswith("[LLM error]"):
+        print("WARN: LLM error in reply — start Ollama for real assistant text")
+    print("Sample reply:")
     sample = json.dumps(chat, ensure_ascii=False)[:400]
     print(sample)
     if len(sample) >= 400:
