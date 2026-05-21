@@ -32,7 +32,7 @@ VENV_STAMP   := $(VENV_BIN)/python$(if $(IS_WIN),.exe,)
 
 .PHONY: help install install-python install-npm \
         api gui cli analyzer mobile dev clean \
-        test test-setup test-api
+        test test-setup test-api check-ollama
 
 .DEFAULT_GOAL := help
 
@@ -104,6 +104,9 @@ test-setup: ## Verify mobile + project layout (Python, no venv required)
 
 test-api: ## Live API smoke test (requires: make api in another terminal)
 	$(PYTHON) "$(ROOT)scripts/test_api_live.py"
+
+check-ollama: $(VENV_STAMP) ## Probe whether Ollama is running and llama3 is available
+	$(PY) -c "from ollama_util import check_ollama; from analyzer import Config; ok=check_ollama(Config.LLM_MODEL); print('ollama:', 'ok' if ok else 'down'); raise SystemExit(0 if ok else 1)"
 
 # ---------------------------------------------------------------------------
 # Clean

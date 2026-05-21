@@ -82,9 +82,14 @@ export default function App() {
   useEffect(() => {
     (async () => {
       try {
-        await axios.get(`${apiBase}/health`, { timeout: 5000 });
-        setStatus('Ready');
-        setStatusCol(T.muted);
+        const { data } = await axios.get(`${apiBase}/health`, { timeout: 5000 });
+        if (data.ollama === 'down') {
+          setStatus('Server OK — Ollama not running on PC');
+          setStatusCol(T.yellow);
+        } else {
+          setStatus('Ready');
+          setStatusCol(T.muted);
+        }
       } catch {
         setStatus('Cannot reach server — check IP and WiFi');
         setStatusCol(T.red);
@@ -165,6 +170,7 @@ export default function App() {
       });
 
       const rec = new Audio.Recording();
+      // 16 kHz mono WAV — matches analyzer Config.SAMPLE_RATE for Whisper
       await rec.prepareToRecordAsync({
         android: {
           extension: '.wav',
@@ -212,10 +218,11 @@ export default function App() {
       // Upload the audio file to the Flask /voice endpoint
       const formData = new FormData();
       const ext = uri.split('.').pop() || 'wav';
+      const mime = ext === 'm4a' ? 'audio/m4a' : 'audio/wav';
       formData.append('audio', {
         uri,
         name:  `recording.${ext}`,
-        type:  ext === 'm4a' ? 'audio/m4a' : 'audio/wav',
+        type:  mime,
       });
 
       const { data } = await axios.post(

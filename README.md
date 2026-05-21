@@ -28,6 +28,7 @@ speech-and-text-/
 ├── gui.py               # Desktop Tkinter UI
 ├── api.py               # Flask REST API (debug + mobile request logs)
 ├── host_util.py         # LAN IP helper (used by api.py)
+├── ollama_util.py       # Ollama health probe (used by api.py)
 ├── requirements.txt     # Python dependencies (pinned)
 ├── requirements-dev.txt # pytest (make test)
 ├── Makefile             # install, run, dev, and test targets
@@ -44,9 +45,10 @@ speech-and-text-/
 ## Prerequisites
 
 1. **Python 3.10+** (tested on 3.12)
-2. **Ollama** (optional for first phone demo — see below):
+2. **Ollama** (required for real assistant replies):
    ```bash
    ollama pull llama3
+   make check-ollama   # should print: ollama: ok
    ```
 3. **PortAudio** (for microphone capture in `gui.py` and CLI `mic` mode):
    - Ubuntu/Debian: `sudo apt install libportaudio2`  
@@ -68,23 +70,68 @@ make cli           # terminal REPL
 make test          # automated checks (no server required)
 ```
 
+## Ollama setup (Windows + Linux)
+
+1. Install [Ollama](https://ollama.com/download) and start the app / service.
+2. Pull the model (matches `Config.LLM_MODEL` in `analyzer.py`):
+   ```bash
+   ollama pull llama3
+   ```
+3. Verify:
+   ```bash
+   make check-ollama
+   # ollama: ok
+   ```
+4. Start the API **after** Ollama is running: `make api`
+
+## V2 demo (full stack — text + voice)
+
+**Fast startup:** The API loads spaCy + LLM config immediately; **Whisper loads only on the first `/voice` request** (or first desktop mic use). Text chat works within seconds of `make api`.
+
+### Text chat on phone
+
+1. `make install` (once)
+2. Start **Ollama**, then **Terminal 1:** `make api` — wait for `API ready`
+3. **Terminal 2:** `make mobile` → scan QR with Expo Go (same Wi‑Fi)
+4. App status **Ready** (or yellow **Ollama not running on PC** if Ollama is down)
+5. Type a message → **Send** → real reply when Ollama is OK
+
+### Voice on phone (hold mic)
+
+1. With `make api` already running, hold the **mic** button, speak, release.
+2. **First voice request** downloads/loads Whisper on the PC (can take a minute) — watch the API terminal.
+3. You should see a user bubble with the transcript and an assistant reply.
+
+`GET /health` returns:
+
+```json
+{
+  "status": "ok",
+  "model": "llama3",
+  "ollama": "ok",
+  "whisper": "not_loaded",
+  "ready_for_chat": true
+}
+```
+
+(`whisper` becomes `"ready"` after the first voice upload.)
+
 ## First phone demo (Android + Expo Go)
 
-**Order matters** — start the API and wait for the pipeline before opening the app on your phone.
+**Order matters** — start Ollama and the API before opening the app on your phone.
 
 1. **One-time setup:** `make install`
-2. **Terminal 1 — API:** `make api`  
-   Wait for **Pipeline ready** (first run may download Whisper for several minutes).  
-   The banner prints your LAN URL, e.g. `http://192.168.1.115:5000`.
-3. **Terminal 2 — Expo:** `make mobile`  
-   Scan the QR code with **Expo Go** (phone on the **same Wi‑Fi** as the PC).
-4. **In the app:** Status should become **Ready**. Type a message → **Send**.  
-   Check the NLP strip (intent / keywords / entities).
-5. **If status stays red:** Open **Settings (gear)** → paste the URL from Terminal 1 → Save.
+2. **Ollama:** `ollama pull llama3` and keep Ollama running
+3. **Terminal 1 — API:** `make api`  
+   Wait for **API ready** (seconds, not minutes — Whisper is lazy).  
+   Note the LAN URL in the banner.
+4. **Terminal 2 — Expo:** `make mobile` → scan QR with **Expo Go**
+5. **In the app:** **Ready** → type → **Send** → check NLP strip + assistant reply
+6. **If status stays red:** Settings (gear) → paste the API URL from Terminal 1
 
-**API URL on the phone:** In dev, the app auto-detects your PC IP from Expo (`expo-constants`). The Settings gear is a fallback if auto-detect fails.
+**API URL on the phone:** Auto-detected from Expo in dev; Settings is the fallback.
 
-**Without Ollama:** Text chat and NLP still work. The assistant `reply` will be an `[LLM error]…` string until Ollama is installed and running — that is expected for testing.
+**Without Ollama:** NLP still works; `reply` will be `[LLM error]…` and status shows **Ollama not running on PC**.
 
 **Firewall (Linux):**
 
