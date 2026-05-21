@@ -28,8 +28,9 @@ import tempfile
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
-from analyzer import SpeechTextAnalyzer
+from analyzer import Config, SpeechTextAnalyzer
 from host_util import lan_ip
+from ollama_util import check_ollama
 
 # ---------------------------------------------------------------------------
 logging.basicConfig(
@@ -43,9 +44,9 @@ logging.getLogger("werkzeug").setLevel(logging.INFO)
 app = Flask(__name__)
 CORS(app)   # allow the React Native app to POST from any origin
 
-log.info("Loading pipeline (Whisper + spaCy + LLaMA 3) …")
+log.info("Loading pipeline (spaCy + LLM; Whisper loads on first /voice) …")
 analyzer = SpeechTextAnalyzer()
-log.info("Pipeline ready.")
+log.info("API ready — text chat available; Whisper loads on first voice request.")
 
 
 # ---------------------------------------------------------------------------
@@ -80,11 +81,22 @@ def _serialize(result) -> dict:
 # Routes
 # ---------------------------------------------------------------------------
 
+def _health_payload() -> dict:
+    ollama_ok = check_ollama(Config.LLM_MODEL)
+    return {
+        "status": "ok",
+        "model": Config.LLM_MODEL,
+        "ollama": "ok" if ollama_ok else "down",
+        "whisper": "ready" if analyzer.whisper_ready else "not_loaded",
+        "ready_for_chat": ollama_ok,
+    }
+
+
 @app.get("/health")
 def health():
-    """Quick liveness check — the mobile app pings this on startup."""
+    """Liveness + readiness for text chat (Ollama) and voice (Whisper)."""
     log.info("MOBILE IN  | %s | GET /health", _client_ip())
-    return jsonify({"status": "ok", "model": "llama3"})
+    return jsonify(_health_payload())
 
 
 @app.post("/chat")
@@ -137,14 +149,22 @@ def voice():
         ext,
     )
 
-    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
-        f.save(tmp.name)
-        tmp_path = tmp.name
-
+    tmp_path: str | None = None
     try:
+        with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+            f.save(tmp.name)
+            tmp_path = tmp.name
+        # File closed here (required on Windows before Whisper opens it)
+
+        if not analyzer.whisper_ready:
+            log.info("Loading Whisper for first voice request …")
         result = analyzer.process_audio_file(tmp_path)
+    except Exception as exc:
+        log.exception("POST /voice failed")
+        return jsonify({"error": str(exc)}), 503
     finally:
-        os.unlink(tmp_path)
+        if tmp_path and os.path.exists(tmp_path):
+            os.unlink(tmp_path)
 
     payload = _serialize(result)
     log.info(

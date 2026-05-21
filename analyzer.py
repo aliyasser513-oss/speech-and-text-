@@ -356,9 +356,19 @@ class SpeechTextAnalyzer:
 
     def __init__(self, cfg: type[Config] = Config) -> None:
         self.cfg = cfg
-        self.stt = SpeechToText(cfg)
+        self._stt: Optional[SpeechToText] = None
         self.nlp = NLPProcessor(cfg)
         self.llm = LLMResponder(cfg)
+
+    def _get_stt(self) -> SpeechToText:
+        """Load Whisper on first voice/file request (keeps API startup fast)."""
+        if self._stt is None:
+            self._stt = SpeechToText(self.cfg)
+        return self._stt
+
+    @property
+    def whisper_ready(self) -> bool:
+        return self._stt is not None
 
     # -- public entry points -------------------------------------------------
 
@@ -371,14 +381,14 @@ class SpeechTextAnalyzer:
         return PipelineResult(user_input=text, nlp=nlp_result, reply=reply)
 
     def process_voice(self) -> PipelineResult:
-        transcript = self.stt.from_microphone()
+        transcript = self._get_stt().from_microphone()
         if not transcript:
             return PipelineResult(user_input="", nlp=None,
                                   reply="I didn't catch any speech. Please try again.")
         return self.process_text(transcript)
 
     def process_audio_file(self, path: str) -> PipelineResult:
-        transcript = self.stt.from_file(path)
+        transcript = self._get_stt().from_file(path)
         return self.process_text(transcript)
 
     def reset_conversation(self) -> None:
