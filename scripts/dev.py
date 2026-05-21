@@ -27,9 +27,10 @@ def main() -> None:
     npx = "npx.cmd" if sys.platform == "win32" else "npx"
 
     print("Starting API (http://0.0.0.0:5000) and Expo (LAN) …")
-    print("Phone: Expo Go → scan QR. API URL auto-detects in dev.")
+    print("Phone: Expo Go → scan QR. LAN IP written to mobile/.env before Expo.")
     print("Press Ctrl+C to stop both.\n")
 
+    subprocess.run([str(py), str(ROOT / "scripts" / "write_mobile_env.py")], cwd=ROOT, check=False)
     api = subprocess.Popen([str(py), str(ROOT / "api.py")], cwd=ROOT)
     expo = subprocess.Popen(
         [npx, "expo", "start", "--lan"],

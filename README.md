@@ -260,13 +260,14 @@ Locked dependencies: `mobile/package-lock.json` — install with `npm ci` (or `m
 - `make dev` runs `scripts/dev.py` (no Bash `trap` required).
 - `make test-setup` / `make test-api` use Python scripts, not `.sh` files.
 - **WSL** is treated as Linux (uses `bin/` paths); run the whole stack inside WSL for the closest match to Linux.
+- **Phone API URL shows `127.0.0.1`**: Expo on Windows often reports `debuggerHost` as localhost. Always start the app with **`make mobile`** (not raw `npx expo start`) — it runs `scripts/write_mobile_env.py`, which detects your Wi‑Fi IPv4 via `ipconfig` and writes `mobile/.env` with `EXPO_PUBLIC_API_BASE=http://192.168.x.x:5000`. Restart Expo after changing networks. If detection still fails, paste the URL from the `make api` banner into Settings (gear).
 
 ## System notes
 
 - **GPU**: Set `STT_DEVICE = "cuda"` and `STT_COMPUTE_TYPE = "float16"` in `Config` for faster Whisper.
 - **Firewall**: Allow inbound TCP **5000** (API) and **8081** (Metro) on the PC.
 - **Android emulator**: Use `http://10.0.2.2:5000` as the API URL in Settings.
-- **Physical phone**: Same Wi‑Fi as the PC; use the LAN IP printed by `make api`.
+- **Physical phone**: Same Wi‑Fi as the PC; `make mobile` writes that IP into `mobile/.env`, or use the URL from the `make api` banner in Settings.
 - **tkinter**: On minimal Linux, install `python3-tk` if `make gui` fails.
 
 ## Author

@@ -22,6 +22,11 @@ import axios from 'axios';
 
 // ─── API URL (dev: same IP as Metro bundler) ───────────────────────────────
 
+function isLoopbackHost(host) {
+  return !host || host === 'localhost' || host === '127.0.0.1' || host === '::1';
+}
+
+/** Expo debuggerHost — often 127.0.0.1 on Windows; prefer EXPO_PUBLIC_API_BASE from make mobile. */
 function devApiBase() {
   const debuggerHost =
     Constants.expoGoConfig?.debuggerHost ??
@@ -29,10 +34,19 @@ function devApiBase() {
     Constants.manifest?.debuggerHost;
   if (!debuggerHost) return null;
   const host = debuggerHost.split(':')[0];
+  if (isLoopbackHost(host)) return null;
   return `http://${host}:5000`;
 }
 
-const DEFAULT_API_BASE = devApiBase() ?? 'http://127.0.0.1:5000';
+function resolveApiBase() {
+  const fromEnv = process.env.EXPO_PUBLIC_API_BASE?.trim().replace(/\/$/, '');
+  if (fromEnv) return fromEnv;
+  const fromExpo = devApiBase();
+  if (fromExpo) return fromExpo;
+  return 'http://127.0.0.1:5000';
+}
+
+const DEFAULT_API_BASE = resolveApiBase();
 
 // Colour palette — matches the desktop dark theme
 const T = {
@@ -91,7 +105,10 @@ export default function App() {
           setStatusCol(T.muted);
         }
       } catch {
-        setStatus('Cannot reach server — check IP and WiFi');
+        const hint = isLoopbackHost(apiBase.replace(/^https?:\/\//, '').split(':')[0])
+          ? ' — run make mobile on PC (writes LAN IP to .env)'
+          : ' — check IP and WiFi';
+        setStatus(`Cannot reach server${hint}`);
         setStatusCol(T.red);
       }
     })();

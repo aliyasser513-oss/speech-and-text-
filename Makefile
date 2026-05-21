@@ -81,7 +81,8 @@ cli: $(VENV_STAMP) ## Interactive CLI (analyzer.py)
 
 analyzer: cli ## Alias for cli
 
-mobile: install-npm ## Expo dev server on LAN (scan QR with Expo Go)
+mobile: install-npm ## Expo on LAN; writes mobile/.env with PC LAN IP (fixes Windows 127.0.0.1)
+	$(call RUN_SCRIPT,write_mobile_env.py)
 	$(CD_MOBILE) && $(NPX) expo start --lan
 
 # ---------------------------------------------------------------------------

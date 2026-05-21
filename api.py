@@ -200,7 +200,7 @@ if __name__ == "__main__":
     print(f"  URL  :  {api_url}")
     print()
     print("  On the phone (Expo Go, same Wi‑Fi):")
-    print("    API URL is auto-detected from your PC IP in dev.")
+    print("    Run make mobile — writes mobile/.env with this LAN IP for the app.")
     print("    Or open Settings (gear) and paste:", api_url)
     print()
     print("  Make sure your phone is on the same WiFi network.")

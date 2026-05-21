@@ -34,8 +34,9 @@ def main() -> None:
     app_js = MOBILE / "App.js"
     if not app_js.is_file():
         fail("missing mobile/App.js")
-    if "devApiBase" not in app_js.read_text(encoding="utf-8"):
-        fail("App.js must define devApiBase() for LAN API auto-detect")
+    app_src = app_js.read_text(encoding="utf-8")
+    if "devApiBase" not in app_src or "EXPO_PUBLIC_API_BASE" not in app_src:
+        fail("App.js must use EXPO_PUBLIC_API_BASE and devApiBase() for LAN API")
 
     icon = MOBILE / "assets" / "icon.png"
     if not icon.is_file() or icon.stat().st_size == 0:
