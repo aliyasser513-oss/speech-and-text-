@@ -6,6 +6,76 @@ A local, privacy-friendly assistant that turns spoken or written input into cont
 
 Everything runs on your machine: Whisper for transcription, spaCy for intent/entities, and **LLaMA 3** via [Ollama](https://ollama.com/) for generation. No cloud API keys are required.
 
+---
+
+## Quick start: zero to hero
+
+> **Goal:** Install once, run the API + Expo on your PC, open the app on your phone over Wi‑Fi, and send a message. First run is ~15 minutes (plus model downloads).
+
+| | |
+|---|---|
+| **You need** | Python 3.10+, [Ollama](https://ollama.com/), [GNU Make](https://gnuwin32.sourceforge.net/) (Windows: `choco install make`), Node 18+ (mobile only), phone + PC on **same Wi‑Fi** |
+| **Windows** | Use `make mobile` (not raw `npx expo start`) so your **192.168.x.x** IP is written to `mobile/.env` — see [Windows notes](#windows-notes) |
+
+### 1 — Install (one time)
+
+```bash
+git clone <your-repo-url>
+cd speech-and-text-
+
+make install          # Python venv + npm in mobile/
+ollama pull llama3    # LLM weights (~4 GB, once)
+make check-ollama     # must print: ollama: ok
+```
+
+### 2 — Run (two terminals, every demo)
+
+**Terminal 1 — API** (keep running):
+
+```bash
+make api
+```
+
+Wait for **`API ready`** and a banner like `http://192.168.x.x:5000` (not `127.0.0.1` on the phone path).
+
+**Terminal 2 — mobile** (keep running):
+
+```bash
+make mobile
+```
+
+You should see `EXPO_PUBLIC_API_BASE=http://192.168.x.x:5000`. Scan the QR code with **Expo Go** (Android/iOS).
+
+**Or one terminal:** `make dev` (API + Expo together).
+
+### 3 — On the phone
+
+1. Same Wi‑Fi as the PC.
+2. App status **Ready** (green).
+3. Type a message → **Send** → assistant reply + NLP strip under the bubble.
+
+**Voice (optional):** Hold **mic**, speak, release. First voice request loads Whisper on the PC (can take a minute).
+
+### You’re done when
+
+- [ ] `make check-ollama` → `ollama: ok`
+- [ ] `make api` banner shows a **192.168.x.x** (or **10.x**) URL
+- [ ] `make mobile` printed `EXPO_PUBLIC_API_BASE=http://192.168…`
+- [ ] Expo Go shows **Ready**, then a real reply (not `[LLM error]…`)
+
+### Quick fixes
+
+| Problem | Fix |
+|---------|-----|
+| App shows **127.0.0.1** or can’t connect | Run **`make mobile`** again; reload app. Or Settings (gear) → paste URL from `make api` banner. |
+| **Ollama not running on PC** (yellow) | Start Ollama app, then `make check-ollama`, restart `make api`. |
+| Red / no connection | Same Wi‑Fi; firewall allow **5000** (API) and **8081** (Expo). Linux: `sudo ufw allow 5000/tcp` and `8081/tcp`. |
+| No LLM reply but NLP works | `ollama pull llama3` and keep Ollama running. |
+
+More detail: [V2 demo](#v2-demo-full-stack--text--voice) · [First phone demo](#first-phone-demo-android--expo-go) · [Makefile commands](#makefile-commands)
+
+---
+
 ## How it works
 
 ```
@@ -55,15 +125,15 @@ speech-and-text-/
      (or `portaudio19-dev` if you build audio tools from source)
 4. **Node.js 18+** and npm (for the mobile app only)
 
-## Quick start (Makefile)
+## Makefile commands
 
-Works on **Linux, macOS, and Windows** (install [GNU Make](https://gnuwin32.sourceforge.net/) or `choco install make` on Windows; use `python` not `python3` if needed).
+Works on **Linux, macOS, and Windows** (`choco install make` on Windows; use `python` not `python3` if needed). **Start here:** [Quick start: zero to hero](#quick-start-zero-to-hero).
 
 ```bash
 make help          # list all targets
 make install       # Python venv + mobile npm deps
 make api           # Flask API on :5000 (Terminal 1)
-make mobile        # Expo on LAN — scan QR with Expo Go (Terminal 2)
+make mobile        # writes mobile/.env + Expo LAN QR (Terminal 2)
 make dev           # API + Expo together
 make gui           # desktop UI only
 make cli           # terminal REPL
@@ -118,18 +188,11 @@ make test          # automated checks (no server required)
 
 ## First phone demo (Android + Expo Go)
 
+Same flow as [Quick start: zero to hero](#quick-start-zero-to-hero) — extra troubleshooting below.
+
 **Order matters** — start Ollama and the API before opening the app on your phone.
 
-1. **One-time setup:** `make install`
-2. **Ollama:** `ollama pull llama3` and keep Ollama running
-3. **Terminal 1 — API:** `make api`  
-   Wait for **API ready** (seconds, not minutes — Whisper is lazy).  
-   Note the LAN URL in the banner.
-4. **Terminal 2 — Expo:** `make mobile` → scan QR with **Expo Go**
-5. **In the app:** **Ready** → type → **Send** → check NLP strip + assistant reply
-6. **If status stays red:** Settings (gear) → paste the API URL from Terminal 1
-
-**API URL on the phone:** Auto-detected from Expo in dev; Settings is the fallback.
+**API URL on the phone:** `make mobile` writes `EXPO_PUBLIC_API_BASE` in `mobile/.env`; Settings (gear) is the fallback.
 
 **Without Ollama:** NLP still works; `reply` will be `[LLM error]…` and status shows **Ollama not running on PC**.
 
